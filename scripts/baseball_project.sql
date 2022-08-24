@@ -13,25 +13,31 @@ WHERE height = 43
 
 --3. Find all players in the database who played at Vanderbilt University. First/Last names, total salary in Maj. league, sort DESC tots. sal 
 --Which Vanderbilt player earned the most money in the majors? 
-SELECT namefirst, namelast, schoolid, SUM(salary) AS total_salary
+SELECT namefirst, namelast, cp.schoolid, schoolname, SUM(salary) AS total_salary
 FROM people
-JOIN collegeplaying
+JOIN collegeplaying AS cp
 USING(playerid)
 JOIN salaries 
 USING(playerid)
-WHERE schoolid = 'vandy'
-GROUP BY namelast, namefirst, schoolid
+JOIN schools AS s
+ON cp.schoolid = s.schoolid
+WHERE cp.schoolid = 'vandy' AND schoolname = 'Vanderbilt University'
+GROUP BY namelast, namefirst, cp.schoolid, schoolname
 ORDER BY total_salary DESC
 --player David Price earned the most. He made $245,553,888 
 
 --4.Fielding Table, group players (3) on position. OF = Outfield; SS,1B, 2B, 3B = Infield; P,C = Battery
 --Number of putouts? 
-
 SELECT SUM(Distinct PO) AS put_outs, 
 CASE WHEN POS = 'OF' THEN 'Outfield'
   WHEN POS = 'SS' OR POS LIKE '%B' THEN 'Infield'
   ELSE 'Battery' END AS group_positions
 FROM fielding
+WHERE yearid = 2016
 GROUP BY group_positions
 ORDER BY put_outs DESC
+--INFIELD:49,059...BATTERY:37,519...OUTFIELD:22,332
+
+--5. Find the average number of strikeouts per game by decade since 1920. 
+
 
