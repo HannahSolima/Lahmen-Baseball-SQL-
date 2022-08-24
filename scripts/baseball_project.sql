@@ -38,6 +38,25 @@ GROUP BY group_positions
 ORDER BY put_outs DESC
 --INFIELD:49,059...BATTERY:37,519...OUTFIELD:22,332
 
---5. Find the average number of strikeouts per game by decade since 1920. 
+--5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
+SELECT COUNT(G) AS games, a.yearid as decades, ROUND(AVG(sum_so), 2) as avg_SO, ROUND(AVG(sum_hr), 2) as avg_HR
+FROM (SELECT p.G, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
+      FROM pitching as p
+     GROUP BY p.G, playerid) as p_sq
+JOIN people
+USING (playerid)
+JOIN appearances as a
+USING (playerid)
+WHERE a.yearid IN 
+(SELECT yearid/10*10 as decade
+  FROM appearances
+  GROUP BY decade
+  HAVING yearid/10*10 >=1920)
+GROUP BY decades
+ORDER BY decades
+--SO:1920-1950 poor, 1960-1980 best, 1990-2010 average
+--
+
+
 
 
