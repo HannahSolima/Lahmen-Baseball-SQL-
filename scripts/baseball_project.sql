@@ -29,7 +29,7 @@ ORDER BY total_salary DESC
 
 --4.Fielding Table, group players (3) on position. OF = Outfield; SS,1B, 2B, 3B = Infield; P,C = Battery
 --Number of putouts? 
-SELECT SUM(Distinct PO) AS put_outs, 
+SELECT SUM(PO) AS put_outs, 
 CASE WHEN POS = 'OF' THEN 'Outfield'
   WHEN POS = 'SS' OR POS LIKE '%B' THEN 'Infield'
   ELSE 'Battery' END AS group_positions
@@ -37,33 +37,33 @@ FROM fielding
 WHERE yearid = 2016
 GROUP BY group_positions
 ORDER BY put_outs DESC
---INFIELD:49,059...BATTERY:37,519...OUTFIELD:22,332
+--INFIELD: 58,934
+--BATTERY: 41,424
+--OUTFIELD: 29,560
 
 --5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
 
 --SO:1920-1950 poor, 1960-1980 best, 1990-2010 average
+SELECT SUM(t.G)/2 AS games, p_sq.yearid/10*10 as decade, ROUND(AVG(sum_so/(t.G/2)), 2) as avg_SO, ROUND(AVG(sum_hr/(t.G/2)), 2) as avg_HR
+FROM (SELECT p.yearid, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
+      FROM pitching as p
+      WHERE p.yearid >=1920
+      GROUP BY playerid, p.yearid) as p_sq
+JOIN teams as t
+USING (yearid)
+GROUP BY decade
+ORDER BY decade
+
+SELECT SUM(G)/2 AS games, yearid/10*10 as decade, ROUND(SUM(so)/(G/2), 2) as avg_SO, ROUND(SUM(hr)/(G/2), 2) as avg_HR
+FROM teams
+WHERE yearid >= 1920
+GROUP BY decade, G
+ORDER BY decade
+---- TEAMS / divided by 2 HELP FROM PRESTON
 --HR: There is not much of a pattern, but the 1970s had the highest avg HR 
 
-SELECT SUM(G) AS games, a.yearid as decades, ROUND(AVG(sum_so), 2) as avg_SO, ROUND(AVG(sum_hr), 2) as avg_HR
-FROM (SELECT p.G, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
-      FROM pitching as p
-      WHERE p.yearid IN 
-            (SELECT yearid/10*10 as decade
-              FROM pitching
-              GROUP BY decade
-              HAVING yearid/10*10 >=1920)
-      GROUP BY p.G, playerid) as p_sq
-GROUP BY decades
-ORDER BY decades
-
-select * from pitching 
 
 
-SELECT p.yearid/10*10 as decade, SUM(p.SO)/SUM(p.G) AS avg_so_perg, SUM(p.HR)/SUM(p.G) AS avg_hr_perg
-FROM pitching as p
-WHERE p.yearid >= 1920
-GROUP BY p.yearid/10*10
 
- 
-GROUP BY p.yearid/10*10
+
 
