@@ -42,16 +42,14 @@ ORDER BY put_outs DESC
 --OUTFIELD: 29,560
 
 --5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
-
---SO:1920-1950 poor, 1960-1980 best, 1990-2010 average
-SELECT SUM(t.G)/2 AS games, p_sq.yearid/10*10 as decade, ROUND(AVG(sum_so/(t.G/2)), 2) as avg_SO, ROUND(AVG(sum_hr/(t.G/2)), 2) as avg_HR
+SELECT SUM(t.G)/2 AS games, p_sq.yearid/10*10 as decade, ROUND(p_sq.sum_so/(t.G/2), 2) as avg_SO, ROUND(p_sq.sum_hr/(t.G/2), 2) as avg_HR
 FROM (SELECT p.yearid, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
       FROM pitching as p
       WHERE p.yearid >=1920
       GROUP BY playerid, p.yearid) as p_sq
 JOIN teams as t
 USING (yearid)
-GROUP BY decade
+GROUP BY decade, p_sq.sum_so, p_sq.sum_hr, t.g
 ORDER BY decade
 
 SELECT SUM(G)/2 AS games, yearid/10*10 as decade, ROUND(SUM(so)/(G/2), 2) as avg_SO, ROUND(SUM(hr)/(G/2), 2) as avg_HR
@@ -59,8 +57,19 @@ FROM teams
 WHERE yearid >= 1920
 GROUP BY decade, G
 ORDER BY decade
+
+SELECT g, yearid, teamid
+FROM teams;
+
 ---- TEAMS / divided by 2 HELP FROM PRESTON
 --HR: There is not much of a pattern, but the 1970s had the highest avg HR 
+
+
+--6. Most success at stealing bases (2016) where success = percentage of stolen base attempts that succeed... at least 20
+SELECT distinct playerid, SUM(sb)
+FROM batting
+GROUP BY playerid
+
 
 
 
