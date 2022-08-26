@@ -13,9 +13,9 @@ WHERE height = 43
 
 --3. Find all players in the database who played at Vanderbilt University. First/Last names, total salary in Maj. league, sort DESC tots. sal 
 --Which Vanderbilt player earned the most money in the majors? 
-SELECT namefirst, namelast, cp.schoolid, schoolname, SUM(salary) AS total_salary
-FROM people
-JOIN collegeplaying AS cp
+SELECT namefirst, namelast, cp.schoolid, schoolname, MONEY(CAST(SUM(DISTINCT salary) AS numeric)) AS total_salary
+FROM collegeplaying as cp
+JOIN people
 USING(playerid)
 JOIN salaries 
 USING(playerid)
@@ -24,7 +24,8 @@ ON cp.schoolid = s.schoolid
 WHERE cp.schoolid = 'vandy' AND schoolname = 'Vanderbilt University'
 GROUP BY namelast, namefirst, cp.schoolid, schoolname
 ORDER BY total_salary DESC
---player David Price earned the most. He made $245,553,888 
+--player David Price earned the most. He made $81,851,296 (two salaries were repeated)
+--s/o to the group for showing me the discrepency in the salaries 
 
 --4.Fielding Table, group players (3) on position. OF = Outfield; SS,1B, 2B, 3B = Infield; P,C = Battery
 --Number of putouts? 
@@ -39,24 +40,30 @@ ORDER BY put_outs DESC
 --INFIELD:49,059...BATTERY:37,519...OUTFIELD:22,332
 
 --5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
-SELECT COUNT(G) AS games, a.yearid as decades, ROUND(AVG(sum_so), 2) as avg_SO, ROUND(AVG(sum_hr), 2) as avg_HR
+
+--SO:1920-1950 poor, 1960-1980 best, 1990-2010 average
+--HR: There is not much of a pattern, but the 1970s had the highest avg HR 
+
+SELECT SUM(G) AS games, a.yearid as decades, ROUND(AVG(sum_so), 2) as avg_SO, ROUND(AVG(sum_hr), 2) as avg_HR
 FROM (SELECT p.G, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
       FROM pitching as p
-     GROUP BY p.G, playerid) as p_sq
-JOIN people
-USING (playerid)
-JOIN appearances as a
-USING (playerid)
-WHERE a.yearid IN 
-(SELECT yearid/10*10 as decade
-  FROM appearances
-  GROUP BY decade
-  HAVING yearid/10*10 >=1920)
+      WHERE p.yearid IN 
+            (SELECT yearid/10*10 as decade
+              FROM pitching
+              GROUP BY decade
+              HAVING yearid/10*10 >=1920)
+      GROUP BY p.G, playerid) as p_sq
 GROUP BY decades
 ORDER BY decades
---SO:1920-1950 poor, 1960-1980 best, 1990-2010 average
---
+
+select * from pitching 
 
 
+SELECT p.yearid/10*10 as decade, SUM(p.SO)/SUM(p.G) AS avg_so_perg, SUM(p.HR)/SUM(p.G) AS avg_hr_perg
+FROM pitching as p
+WHERE p.yearid >= 1920
+GROUP BY p.yearid/10*10
 
+ 
+GROUP BY p.yearid/10*10
 
