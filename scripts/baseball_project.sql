@@ -1,7 +1,7 @@
 --1.What range of years for baseball games played does the provided database cover?
 SELECT MIN(debut), MAX(finalgame)
 FROM people
---Date Range: 1871-2017
+--Date Range: 1871-2017 (but it is the 2016 season)
 
 --2.Find the name and height of the shortest player in the database. How many games did he play in? What is the name of the team for which he played?
 Select namegiven, height, teamid, g_all
@@ -47,11 +47,13 @@ yearid/10*10 as decade,
 ROUND(SUM(CAST(so as numeric))/(SUM(G/2)), 2) as avg_SO, 
 ROUND(SUM(CAST(hr as numeric))/(SUM(G/2)), 2) as avg_HR
 FROM teams
-WHERE yearid >= 1920 --Think there is still a problem where the years are only counting 1920 not 1920-29
+WHERE yearid >= 1920
 GROUP BY decade
 ORDER BY decade
 -- TEAMS / divided by 2 HELP FROM PRESTON
 --SO: postive relationship with decades where HR seems to be relatively uneffected by the varying decades
+--does the trend have to do with civil rights movement and letting all races play the sport? 
+--because Jackie Robinson was the first african-american to play major baseball and his first game was in 1947
 
 --6. Most success at stealing bases (2016) where success = percentage of stolen base attempts that succeed... at least 20
 SELECT distinct namegiven, 
@@ -68,15 +70,15 @@ ORDER BY percent_success_rate DESC;
 --7. 1970-2016, largest # wins (lost world series) 
 SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
 FROM teams
-WHERE WSWin IS NOT NULL AND WSWIN = 'N' AND yearid BETWEEN 1970 AND 2016
+WHERE WSWIN = 'N' AND yearid BETWEEN 1970 AND 2016
 GROUP BY yearid, name, World_Series_Champs
 ORDER BY game_wins DESC;
 --2001, Seattle Mariners, 116 wins, not a world series champion
 
---smallest # wins (won world series)
+--7.smallest # wins (won world series)
 SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
 FROM teams
-WHERE WSWin IS NOT NULL AND WSWIN = 'Y' AND yearid BETWEEN 1970 AND 2016 AND YEARID !=1981
+WHERE WSWIN = 'Y' AND yearid BETWEEN 1970 AND 2016 AND YEARID !=1981
 GROUP BY yearid, name, World_Series_Champs
 ORDER BY game_wins;
 --w/o problem 1981 year where los angeles dogers won the world series w/ 63 game wins
@@ -84,15 +86,30 @@ ORDER BY game_wins;
 
 --7. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? 
 --What percentage of the time?
-WITH highest_wins_per_year AS (SELECT DISTINCT yearid, MAX(w) OVER(PARTITION BY teamid) as most_games_won, WSWin
-                            FROM teams
-                            WHERE WSWin IS NOT NULL AND WSWin = 'Y' AND yearid BETWEEN 1970 AND 2016
-                            GROUP BY teamid, yearid, w, WSWin
-                            ORDER BY yearid DESC)
-SELECT DISTINCT yearid, most_games_won, WSWin as World_Series_Champs
-FROM highest_wins_per_year
-JOIN teams
-USING (yearid)
-WHERE WSWin IS NOT NULL AND yearid BETWEEN 1970 AND 2016
-GROUP BY yearid, name, World_Series_Champs, most_games_won
-ORDER BY yearid DESC;
+WITH CTE_N AS (SELECT COUNT(sub1.World_Series_win) as num_maxw_noWS
+               FROM (SELECT t.yearid, t.w, t.wswin as World_Series_win
+                     FROM teams as t
+                     JOIN (SELECT yearid, MAX(w) as highest_games_won 
+                           FROM teams 
+                           GROUP BY yearid) AS subquery ON subquery.yearid = t.yearid AND subquery.highest_games_won = t.w
+                           WHERE t.yearid BETWEEN 1970 AND 2016 AND t.YEARID !=1981
+                           ORDER BY t.yearid DESC) as sub1
+                            WHERE sub1.World_Series_win = 'N'),
+CTE_Y AS (SELECT COUNT(sub2.World_Series_win) as num_maxw_WSwin
+               FROM (SELECT t.yearid, t.w, t.wswin as World_Series_win
+                     FROM teams as t
+                     JOIN (SELECT yearid, MAX(w) as highest_games_won 
+                           FROM teams 
+                           GROUP BY yearid) AS subquery ON subquery.yearid = t.yearid AND subquery.highest_games_won = t.w
+                           WHERE t.yearid BETWEEN 1970 AND 2016 AND t.YEARID !=1981
+                           ORDER BY t.yearid DESC) as sub2
+                           WHERE sub2.World_Series_win = 'Y')
+SELECT num_maxw_noWS, num_maxw_WSwin, 
+ROUND((CAST(num_maxw_noWS as numeric)/(num_maxw_noWS+num_maxw_WSwin))*100,2) AS percent_noWS,
+ROUND((CAST(num_maxw_WSwin as numeric)/(num_maxw_noWS+num_maxw_WSwin))*100,2) AS percent_WSwin
+FROM CTE_N              
+CROSS JOIN CTE_Y
+--2007 has a tie...1994 is null
+--Need #Y AND #N THEN I need to #Y/(#Y+#N) plus #N/(#Y+#N) for percentage
+
+                          
