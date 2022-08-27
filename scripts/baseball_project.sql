@@ -42,9 +42,12 @@ ORDER BY put_outs DESC
 --OUTFIELD: 29,560
 
 --5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
-SELECT SUM(G)/2 AS games, yearid/10*10 as decade, ROUND(SUM(so)/(SUM(G/2)), 2) as avg_SO, ROUND(SUM(hr)/(SUM(G/2)), 2) as avg_HR
+SELECT SUM(G)/2 AS games, 
+yearid/10*10 as decade, 
+ROUND(SUM(CAST(so as numeric))/(SUM(G/2)), 2) as avg_SO, 
+ROUND(SUM(CAST(hr as numeric))/(SUM(G/2)), 2) as avg_HR
 FROM teams
-WHERE yearid >= 1920
+WHERE yearid >= 1920 --Think there is still a problem where the years are only counting 1920 not 1920-29
 GROUP BY decade
 ORDER BY decade
 -- TEAMS / divided by 2 HELP FROM PRESTON
@@ -52,16 +55,15 @@ ORDER BY decade
 
 --6. Most success at stealing bases (2016) where success = percentage of stolen base attempts that succeed... at least 20
 SELECT distinct namegiven, 
-SUM(sb) as success_sb_2016, 
-ROUND((CAST(SUM(sb) as numeric)/(SUM(sb) OVER () + SUM(cs) OVER()))*100,2) as percent_success_rate
+SUM(sb) as success_sb_2016, SUM(sb) + SUM(cs) as total_attempts,
+ROUND(CAST(SUM(sb) as numeric)/(CAST(SUM(sb) as numeric) + CAST(SUM(cs) as numeric))*100,2) as percent_success_rate
 FROM batting
 JOIN people
 USING (playerid) 
-WHERE yearid = 2016 AND sb >=20
+WHERE yearid = 2016 AND (sb + cs) >=20
 GROUP BY namegiven, sb, cs
 ORDER BY percent_success_rate DESC;
---Jonathan Rafael, 5.94% success rate
-
+--Chris Scott, 91.30% success percentage
 
 --7. 1970-2016, largest # wins (lost world series) 
 SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
@@ -69,11 +71,28 @@ FROM teams
 WHERE WSWin IS NOT NULL AND WSWIN = 'N' AND yearid BETWEEN 1970 AND 2016
 GROUP BY yearid, name, World_Series_Champs
 ORDER BY game_wins DESC;
-
+--2001, Seattle Mariners, 116 wins, not a world series champion
 
 --smallest # wins (won world series)
 SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
 FROM teams
-WHERE WSWin IS NOT NULL AND WSWIN = 'Y' AND yearid BETWEEN 1970 AND 2016
+WHERE WSWin IS NOT NULL AND WSWIN = 'Y' AND yearid BETWEEN 1970 AND 2016 AND YEARID !=1981
 GROUP BY yearid, name, World_Series_Champs
 ORDER BY game_wins;
+--w/o problem 1981 year where los angeles dogers won the world series w/ 63 game wins
+--2006, St. Louis Cardinals, 83 wins, world series champion
+
+--7. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? 
+--What percentage of the time?
+WITH highest_wins_per_year AS (SELECT DISTINCT yearid, MAX(w) OVER(PARTITION BY teamid) as most_games_won, WSWin
+                            FROM teams
+                            WHERE WSWin IS NOT NULL AND WSWin = 'Y' AND yearid BETWEEN 1970 AND 2016
+                            GROUP BY teamid, yearid, w, WSWin
+                            ORDER BY yearid DESC)
+SELECT DISTINCT yearid, most_games_won, WSWin as World_Series_Champs
+FROM highest_wins_per_year
+JOIN teams
+USING (yearid)
+WHERE WSWin IS NOT NULL AND yearid BETWEEN 1970 AND 2016
+GROUP BY yearid, name, World_Series_Champs, most_games_won
+ORDER BY yearid DESC;
