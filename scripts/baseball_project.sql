@@ -42,37 +42,38 @@ ORDER BY put_outs DESC
 --OUTFIELD: 29,560
 
 --5. Find the average number of strikeouts per game by decade since 1920. Round 2 decimals.
-SELECT SUM(t.G)/2 AS games, p_sq.yearid/10*10 as decade, ROUND(p_sq.sum_so/(t.G/2), 2) as avg_SO, ROUND(p_sq.sum_hr/(t.G/2), 2) as avg_HR
-FROM (SELECT p.yearid, p.playerid, SUM(SO) as sum_so, SUM(HR) as sum_hr
-      FROM pitching as p
-      WHERE p.yearid >=1920
-      GROUP BY playerid, p.yearid) as p_sq
-JOIN teams as t
-USING (yearid)
-GROUP BY decade, p_sq.sum_so, p_sq.sum_hr, t.g
-ORDER BY decade
-
-SELECT SUM(G)/2 AS games, yearid/10*10 as decade, ROUND(SUM(so)/(G/2), 2) as avg_SO, ROUND(SUM(hr)/(G/2), 2) as avg_HR
+SELECT SUM(G)/2 AS games, yearid/10*10 as decade, ROUND(SUM(so)/(SUM(G/2)), 2) as avg_SO, ROUND(SUM(hr)/(SUM(G/2)), 2) as avg_HR
 FROM teams
 WHERE yearid >= 1920
-GROUP BY decade, G
+GROUP BY decade
 ORDER BY decade
-
-SELECT g, yearid, teamid
-FROM teams;
-
----- TEAMS / divided by 2 HELP FROM PRESTON
---HR: There is not much of a pattern, but the 1970s had the highest avg HR 
-
+-- TEAMS / divided by 2 HELP FROM PRESTON
+--SO: postive relationship with decades where HR seems to be relatively uneffected by the varying decades
 
 --6. Most success at stealing bases (2016) where success = percentage of stolen base attempts that succeed... at least 20
-SELECT distinct playerid, SUM(sb)
+SELECT distinct namegiven, 
+SUM(sb) as success_sb_2016, 
+ROUND((CAST(SUM(sb) as numeric)/(SUM(sb) OVER () + SUM(cs) OVER()))*100,2) as percent_success_rate
 FROM batting
-GROUP BY playerid
+JOIN people
+USING (playerid) 
+WHERE yearid = 2016 AND sb >=20
+GROUP BY namegiven, sb, cs
+ORDER BY percent_success_rate DESC;
+--Jonathan Rafael, 5.94% success rate
 
 
+--7. 1970-2016, largest # wins (lost world series) 
+SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
+FROM teams
+WHERE WSWin IS NOT NULL AND WSWIN = 'N' AND yearid BETWEEN 1970 AND 2016
+GROUP BY yearid, name, World_Series_Champs
+ORDER BY game_wins DESC;
 
 
-
-
-
+--smallest # wins (won world series)
+SELECT yearid, name, SUM(w) as game_wins, WSWin as World_Series_Champs
+FROM teams
+WHERE WSWin IS NOT NULL AND WSWIN = 'Y' AND yearid BETWEEN 1970 AND 2016
+GROUP BY yearid, name, World_Series_Champs
+ORDER BY game_wins;
