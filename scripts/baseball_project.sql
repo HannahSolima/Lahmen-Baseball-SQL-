@@ -92,7 +92,7 @@ WITH CTE_N AS (SELECT COUNT(sub1.World_Series_win) as num_maxw_noWS
                      JOIN (SELECT yearid, MAX(w) as highest_games_won 
                            FROM teams 
                            GROUP BY yearid) AS subquery ON subquery.yearid = t.yearid AND subquery.highest_games_won = t.w
-                           WHERE t.yearid BETWEEN 1970 AND 2016 AND t.YEARID !=1981
+                           WHERE t.yearid BETWEEN 1970 AND 2016
                            ORDER BY t.yearid DESC) as sub1
                             WHERE sub1.World_Series_win = 'N'),
 CTE_Y AS (SELECT COUNT(sub2.World_Series_win) as num_maxw_WSwin
@@ -101,15 +101,15 @@ CTE_Y AS (SELECT COUNT(sub2.World_Series_win) as num_maxw_WSwin
                      JOIN (SELECT yearid, MAX(w) as highest_games_won 
                            FROM teams 
                            GROUP BY yearid) AS subquery ON subquery.yearid = t.yearid AND subquery.highest_games_won = t.w
-                           WHERE t.yearid BETWEEN 1970 AND 2016 AND t.YEARID !=1981
+                           WHERE t.yearid BETWEEN 1970 AND 2016
                            ORDER BY t.yearid DESC) as sub2
                            WHERE sub2.World_Series_win = 'Y')
-SELECT num_maxw_noWS, num_maxw_WSwin, 
-ROUND((CAST(num_maxw_noWS as numeric)/(num_maxw_noWS+num_maxw_WSwin))*100,2) AS percent_noWS,
-ROUND((CAST(num_maxw_WSwin as numeric)/(num_maxw_noWS+num_maxw_WSwin))*100,2) AS percent_WSwin
+SELECT num_maxw_noWS-6, num_maxw_WSwin, 
+ROUND(((CAST(num_maxw_noWS as numeric)-6)/47)*100,2) AS percent_noWS,
+ROUND((CAST(num_maxw_WSwin as numeric)/47)*100,2) AS percent_WSwin
 FROM CTE_N              
 CROSS JOIN CTE_Y
---2007 has a tie...1994 is null
---Need #Y AND #N THEN I need to #Y/(#Y+#N) plus #N/(#Y+#N) for percentage
+--2007,2013,2003,2002,1971 are all ties for max, 1994 is null = 6 so 53-6 = 47
 
+--8. 
                           
