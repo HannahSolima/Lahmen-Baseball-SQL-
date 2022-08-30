@@ -104,12 +104,56 @@ CTE_Y AS (SELECT COUNT(sub2.World_Series_win) as num_maxw_WSwin
                            WHERE t.yearid BETWEEN 1970 AND 2016
                            ORDER BY t.yearid DESC) as sub2
                            WHERE sub2.World_Series_win = 'Y')
-SELECT num_maxw_noWS-6, num_maxw_WSwin, 
-ROUND(((CAST(num_maxw_noWS as numeric)-6)/47)*100,2) AS percent_noWS,
-ROUND((CAST(num_maxw_WSwin as numeric)/47)*100,2) AS percent_WSwin
+SELECT (num_maxw_noWS-6) as num_maxw_noWS, num_maxw_WSwin, 
+ROUND(((CAST(num_maxw_noWS as numeric)-6)/46)*100,2) AS percent_noWS,
+ROUND((CAST(num_maxw_WSwin as numeric)/46)*100,2) AS percent_WSwin
 FROM CTE_N              
 CROSS JOIN CTE_Y
---2007,2013,2003,2002,1971 are all ties for max, 1994 is null = 6 so 53-6 = 47
+--2013,2007, 2006 2003,2002,1971 are all ties for max, 1994 is null, so total of 7 so 53-7 = 46
+--ANSWER 7.c.a: max wins and no world series is more prevalent
+--ANSWER 7.c.b: percentage no world series win and max games won = 73.91%
+--              percentage world series win and max games won =26.09
+--THIS QUESTION GETS A THUMBS DOWN FROM ME
 
---8. 
-                          
+--8. Teams & Parks with the Top 5 avg. attendence PER GAME in 2016. More than 10 games 
+SELECT teams.name, park_name, SUM(games) as total_games, 
+ROUND(SUM(CAST(homegames.attendance as numeric))/SUM(CAST(games as numeric)),2) as AVG_attendance
+FROM homegames
+JOIN parks
+USING (park)
+JOIN teams
+ON teams.teamid = homegames.team AND teams.yearid = homegames.year
+WHERE year = 2016 AND games > 10
+GROUP BY teams.name, park_name
+ORDER BY avg_attendance DESC
+LIMIT 5
+--Top 5 ^
+--Bottom 5 
+SELECT teams.name, park_name, SUM(games) as total_games, 
+ROUND(SUM(CAST(homegames.attendance as numeric))/SUM(CAST(games as numeric)),2) as AVG_attendance
+FROM homegames
+JOIN parks
+USING (park)
+JOIN teams
+ON teams.teamid = homegames.team AND teams.yearid = homegames.year
+WHERE year = 2016 AND games > 10
+GROUP BY teams.name, park_name
+ORDER BY avg_attendance
+LIMIT 5
+--I must have done something wrong.... this seemed too straight forward
+
+--9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? 
+--Give their full name and the teams that they were managing when they won the award.
+SELECT am.playerid, am.awardid, am.yearid, m.teamid 
+FROM awardsmanagers am
+JOIN people p
+USING (playerid)
+JOIN managers m
+USING(yearid,playerid)
+WHERE am.awardid = 'TSN Manager of the Year' 
+AND am.lgid IN ('AL','NL')
+GROUP BY am.playerid, p.namegiven, am.awardid, am.yearid, m.teamid
+ORDER BY am.playerid
+
+
+
