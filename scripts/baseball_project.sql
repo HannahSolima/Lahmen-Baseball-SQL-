@@ -144,16 +144,33 @@ LIMIT 5
 
 --9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? 
 --Give their full name and the teams that they were managing when they won the award.
-SELECT am.playerid, am.awardid, am.yearid, m.teamid 
+--THE BELOW IS MY FIRST WHERE I MANUALLY FOUND THE RIGHT PEOPLE
+-- SELECT am.playerid, p.namefirst, p.namelast, am.awardid, am.lgid, am.yearid, t.name
+-- FROM awardsmanagers am
+-- JOIN awardsmanagers am2
+-- USING (playerid)
+-- JOIN people p
+-- USING (playerid)
+-- JOIN managers m
+-- USING(yearid,playerid)
+-- JOIN teams t
+-- ON t.teamid = m.teamid
+-- WHERE awardid = 'TSN Manager of the Year' AND am.lgid IN ('AL','NL')
+-- AND playerid IN ('johnsda02', 'leylaji99')
+-- GROUP BY am.playerid,  p.namefirst, p.namelast, am.awardid, am.lgid, am.yearid, t.name
+-- ORDER BY am.playerid
+
+SELECT am.playerid, CONCAT(p.namefirst,' ', p.namelast) as full_name, am2.awardid, am.lgid, am.yearid, am2.lgid, am2.yearid, t.name
 FROM awardsmanagers am
+JOIN awardsmanagers am2
+USING (playerid)
 JOIN people p
 USING (playerid)
 JOIN managers m
-USING(yearid,playerid)
-WHERE am.awardid = 'TSN Manager of the Year' 
-AND am.lgid IN ('AL','NL')
-GROUP BY am.playerid, p.namegiven, am.awardid, am.yearid, m.teamid
+ON am.yearid = m.yearid AND am.playerid = m.playerid
+JOIN teams t
+ON t.teamid = m.teamid
+WHERE am.awardid = 'TSN Manager of the Year' AND am2.awardid = 'TSN Manager of the Year' 
+AND am.lgid ='NL' AND am2.lgid = 'AL'
+GROUP BY am.playerid, full_name, am2.awardid, am.lgid, am2.lgid, am.yearid, am2.yearid, t.name
 ORDER BY am.playerid
-
-
-
