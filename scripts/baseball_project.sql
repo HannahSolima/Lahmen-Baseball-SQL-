@@ -160,17 +160,63 @@ LIMIT 5
 -- GROUP BY am.playerid,  p.namefirst, p.namelast, am.awardid, am.lgid, am.yearid, t.name
 -- ORDER BY am.playerid
 
-SELECT am.playerid, CONCAT(p.namefirst,' ', p.namelast) as full_name, am2.awardid, am.lgid, am.yearid, am2.lgid, am2.yearid, t.name
+
+WITH CTE_NL AS (SELECT am.playerid, CONCAT(p.namefirst,' ', p.namelast) as full_name, am.awardid, am.lgid, am.yearid, t.name as NL_team
 FROM awardsmanagers am
-JOIN awardsmanagers am2
-USING (playerid)
 JOIN people p
 USING (playerid)
-JOIN managers m
-ON am.yearid = m.yearid AND am.playerid = m.playerid
+JOIN managers m 
+USING(yearid, playerid)
 JOIN teams t
 ON t.teamid = m.teamid
-WHERE am.awardid = 'TSN Manager of the Year' AND am2.awardid = 'TSN Manager of the Year' 
-AND am.lgid ='NL' AND am2.lgid = 'AL'
-GROUP BY am.playerid, full_name, am2.awardid, am.lgid, am2.lgid, am.yearid, am2.yearid, t.name
-ORDER BY am.playerid
+WHERE am.awardid = 'TSN Manager of the Year' 
+AND am.lgid ='NL'
+GROUP BY am.playerid, full_name, am.awardid, am.lgid, am.yearid, t.name
+ORDER BY am.playerid),
+
+CTE_AL AS (SELECT am2.playerid, CONCAT(p.namefirst,' ', p.namelast) as full_name, am2.awardid, am2.lgid, am2.yearid, t.name as AL_team
+FROM awardsmanagers am2
+JOIN people p
+USING (playerid)
+JOIN managers m --needed to get to teams 
+USING(yearid, playerid)
+JOIN teams t
+ON t.teamid = m.teamid
+WHERE am2.awardid = 'TSN Manager of the Year' 
+AND am2.lgid = 'AL'
+GROUP BY am2.playerid, full_name, am2.awardid, am2.lgid, am2.lgid, am2.yearid, t.name
+ORDER BY am2.playerid)
+
+SELECT CTE_NL.playerid, CTE_AL.full_name, CTE_NL.awardid, 
+CTE_NL.lgid as NL, CTE_NL.yearid as NL_year, NL_team,
+CTE_AL.lgid as AL, CTE_AL.yearid as AL_year, AL_team
+FROM CTE_NL
+JOIN CTE_AL
+USING(playerid)
+
+
+--10. Find all players who hit their career highest number of home runs in 2016. 
+--Consider only players who have played in the league for at least 10 years, and who hit at least one home run 2016. 
+--Report the players' first and last names and the number of home runs they hit in 2016. 
+SELECT CONCAT(namefirst,' ', namelast) as full_name, hr as max_hr_match_2016
+FROM (SELECT b.playerid, b.yearid, b.hr
+      FROM batting b
+      JOIN (SELECT playerid, MAX(hr) as max_hr
+            FROM batting
+            GROUP BY playerid) as sub 
+       ON sub.playerid = b.playerid AND sub.max_hr = b.hr
+       WHERE b.yearid = 2016 AND b.hr >=1) as sub_main
+JOIN people
+USING(playerid)
+WHERE playerid IN 
+      (SELECT playerid
+      FROM batting
+      GROUP BY playerid
+      HAVING COUNT(playerid) >= 10)
+ORDER BY max_hr_match_2016 DESC
+
+
+--how to get number of years in league? 
+-- STEP 1: find career highest home runs 
+-- STEP 2: home runs in 2016 
+-- STEP 3: find the matches 
