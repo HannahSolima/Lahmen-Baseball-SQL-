@@ -198,7 +198,28 @@ USING(playerid)
 --10. Find all players who hit their career highest number of home runs in 2016. 
 --Consider only players who have played in the league for at least 10 years, and who hit at least one home run 2016. 
 --Report the players' first and last names and the number of home runs they hit in 2016. 
-SELECT CONCAT(namefirst,' ', namelast) as full_name, hr as max_hr_match_2016
+SELECT playerid, CONCAT(namefirst,' ', namelast) as full_name, max_hr as max_hr_match_2016
+FROM (SELECT b.playerid, MAX(inner_sub.total_hr) as max_hr
+      FROM batting b
+      JOIN (SELECT playerid, yearid, SUM(hr) OVER(PARTITION BY playerid, yearid) as total_hr
+            FROM batting
+            GROUP BY playerid, yearid, hr
+            ORDER BY playerid) as inner_sub
+      ON inner_sub.playerid = b.playerid
+      WHERE b.yearid = 2016 AND b.hr >0
+      GROUP BY b.playerid) as outer_sub
+JOIN people
+USING(playerid)
+WHERE playerid IN 
+      (SELECT playerid
+      FROM batting
+      GROUP BY playerid
+      HAVING COUNT(playerid) >= 10) 
+ORDER BY max_hr_match_2016 DESC, playerid;
+
+
+--original attempt (but I thought years were individual and not multiple)
+SELECT playerid, CONCAT(namefirst,' ', namelast) as full_name, hr as max_hr_match_2016
 FROM (SELECT b.playerid, b.yearid, b.hr
       FROM batting b
       JOIN (SELECT playerid, MAX(hr) as max_hr
@@ -215,8 +236,20 @@ WHERE playerid IN
       HAVING COUNT(playerid) >= 10)
 ORDER BY max_hr_match_2016 DESC
 
+--clarifying code for myself
+SELECT playerid, yearid, SUM(hr) as total_hr
+FROM batting 
+WHERE yearid = 2016
+GROUP BY playerid, yearid
+ORDER BY total_hr DESC
+
+--person to check if I was getting correct output (at least I hoped this helped me)
+SELECT playerid, hr, yearid
+FROM batting
+WHERE playerid = 'wilsobo02'
 
 --how to get number of years in league? 
 -- STEP 1: find career highest home runs 
 -- STEP 2: home runs in 2016 
 -- STEP 3: find the matches 
+
