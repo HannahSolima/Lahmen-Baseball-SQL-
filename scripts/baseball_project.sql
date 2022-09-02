@@ -230,8 +230,17 @@ JOIN hr_2016_high as h2h
 USING (playerid)
 WHERE yl.yrs_in_league > 9
 AND ch.max_hr = h2h.total_hr
+--Where you at Justin Upton and what's the deal?
 
-
-
-Justin Upton 
-
+--WHOOP WHOOP - Open endded questions.... PARTY TIME
+--11. Is there any correlation between number of wins and team salary? 2000 onward, on year-to-year basis
+SELECT s.teamid, s.playerid, s.yearid, s.lgid, MONEY(CAST(s.salary as numeric)) as salary, t.w AS wins
+FROM salaries s
+JOIN teams t
+USING (teamid,yearid)
+WHERE yearid >=2000
+ORDER BY yearid DESC, wins DESC;
+--dropping this into excel... looking at the differnt years...
+---I didn't see any major trend indicating number of wins correlates to salary amount...
+--there were slightly more higher wins in the higher salaries and slightly less wins in the lower salaries 
+--but there were a lot of outliers that seems to indicate that it is less about the number of wins but player proformance perhaps that is a major factor in salary amount
