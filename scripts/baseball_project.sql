@@ -109,7 +109,7 @@ ROUND(((CAST(num_maxw_noWS as numeric)-6)/46)*100,2) AS percent_noWS,
 ROUND((CAST(num_maxw_WSwin as numeric)/46)*100,2) AS percent_WSwin
 FROM CTE_N              
 CROSS JOIN CTE_Y
---2013,2007, 2006 2003,2002,1971 are all ties for max, 1994 is null, so total of 7 so 53-7 = 46
+--2013,2007,2006,2003,2002,1971 are all ties for max, 1994 is null, so total of 7 so 53-7 = 46
 --ANSWER 7.c.a: max wins and no world series is more prevalent
 --ANSWER 7.c.b: percentage no world series win and max games won = 73.91%
 --              percentage world series win and max games won =26.09
@@ -198,58 +198,40 @@ USING(playerid)
 --10. Find all players who hit their career highest number of home runs in 2016. 
 --Consider only players who have played in the league for at least 10 years, and who hit at least one home run 2016. 
 --Report the players' first and last names and the number of home runs they hit in 2016. 
-SELECT playerid, CONCAT(namefirst,' ', namelast) as full_name, max_hr as max_hr_match_2016
-FROM (SELECT b.playerid, MAX(inner_sub.total_hr) as max_hr
-      FROM batting b
-      JOIN (SELECT playerid, yearid, SUM(hr) OVER(PARTITION BY playerid, yearid) as total_hr
-            FROM batting
-            GROUP BY playerid, yearid, hr
-            ORDER BY playerid) as inner_sub
-      ON inner_sub.playerid = b.playerid
-      WHERE b.yearid = 2016 AND b.hr >0
-      GROUP BY b.playerid) as outer_sub
-JOIN people
+WITH yrs_league AS (SELECT playerid, CONCAT(namefirst,' ', namelast) as full_name, final_year - debut_year as yrs_in_league
+                    FROM (SELECT playerid, namefirst, namelast, 
+                          DATE_PART('year', CAST(debut as DATE)) as debut_year, 
+                          DATE_PART('year', CAST(finalgame as DATE)) as final_year
+                          FROM people) as dates_in_league
+                    ORDER BY yrs_in_league DESC), 
+                          
+career_high AS (SELECT b.playerid, MAX(total_hr_by_year.total_hr) as max_hr
+                FROM batting b
+                JOIN (SELECT playerid, yearid, SUM(hr) as total_hr
+                      FROM batting
+                      GROUP BY playerid, yearid
+                      ORDER BY playerid) as total_hr_by_year
+                ON total_hr_by_year.playerid = b.playerid
+                WHERE hr >0
+                GROUP BY b.playerid
+                ORDER BY max_hr DESC),
+
+hr_2016_high AS (SELECT playerid, yearid, SUM(hr) as total_hr
+              FROM batting 
+              WHERE yearid = 2016
+              GROUP BY playerid, yearid
+              ORDER BY total_hr DESC) 
+
+SELECT yl.full_name, ch.max_hr, yl.yrs_in_league
+FROM yrs_league as yl
+JOIN career_high as ch
 USING(playerid)
-WHERE playerid IN 
-      (SELECT playerid
-      FROM batting
-      GROUP BY playerid
-      HAVING COUNT(playerid) >= 10) 
-ORDER BY max_hr_match_2016 DESC, playerid;
+JOIN hr_2016_high as h2h 
+USING (playerid)
+WHERE yl.yrs_in_league > 9
+AND ch.max_hr = h2h.total_hr
 
 
---original attempt (but I thought years were individual and not multiple)
-SELECT playerid, CONCAT(namefirst,' ', namelast) as full_name, hr as max_hr_match_2016
-FROM (SELECT b.playerid, b.yearid, b.hr
-      FROM batting b
-      JOIN (SELECT playerid, MAX(hr) as max_hr
-            FROM batting
-            GROUP BY playerid) as sub 
-       ON sub.playerid = b.playerid AND sub.max_hr = b.hr
-       WHERE b.yearid = 2016 AND b.hr >=1) as sub_main
-JOIN people
-USING(playerid)
-WHERE playerid IN 
-      (SELECT playerid
-      FROM batting
-      GROUP BY playerid
-      HAVING COUNT(playerid) >= 10)
-ORDER BY max_hr_match_2016 DESC
 
---clarifying code for myself
-SELECT playerid, yearid, SUM(hr) as total_hr
-FROM batting 
-WHERE yearid = 2016
-GROUP BY playerid, yearid
-ORDER BY total_hr DESC
-
---person to check if I was getting correct output (at least I hoped this helped me)
-SELECT playerid, hr, yearid
-FROM batting
-WHERE playerid = 'wilsobo02'
-
---how to get number of years in league? 
--- STEP 1: find career highest home runs 
--- STEP 2: home runs in 2016 
--- STEP 3: find the matches 
+Justin Upton 
 
